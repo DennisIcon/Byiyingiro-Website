@@ -9,12 +9,12 @@ const port = 3000;
 const transporter = nodemailer.createTransport({
     service: 'gmail', 
     auth: {
-        user: 'byiyingirodennis@gmail.com', 
-        pass: '@denis078',
+        user: 'byiyingirodennis@gmail.com', // Replace with your email
+        pass: '@denis078',                   // Replace with your email password
     },
 });
 
-const sendEmail = (recipient) => {
+const sendEmail = (recipient, callback) => {
     const mailOptions = {
         from: 'byiyingirodennis@gmail.com',
         to: recipient,
@@ -25,10 +25,11 @@ const sendEmail = (recipient) => {
     transporter.sendMail(mailOptions, (error, info) => {
         if (error) {
             console.error('Error sending email:', error);
-            return `Error sending email: ${error.message}`; // Customize your error message here
+            callback(`Error sending email: ${error.message}`);
+        } else {
+            console.log('Email sent: ' + info.response);
+            callback(`Email sent: ${info.response}`);
         }
-        console.log('Email sent: ' + info.response);
-        return `Email sent: ${info.response}`; // Success message
     });
 };
 
@@ -47,14 +48,23 @@ const server = http.createServer((req, res) => {
     } else if (req.method === 'POST' && req.url === '/send-email') {
         let body = '';
         req.on('data', chunk => {
-            body += chunk.toString(); // convert Buffer to string
+            body += chunk.toString(); // Convert Buffer to string
         });
         req.on('end', () => {
             const { email } = querystring.parse(body);
-            const emailResponse = sendEmail(email); // Send the email
-            res.statusCode = 200;
-            res.setHeader('Content-Type', 'text/plain');
-            res.end(emailResponse);
+            
+            // Check if email is provided
+            if (!email) {
+                res.statusCode = 400;
+                res.end('Email is required');
+                return;
+            }
+
+            sendEmail(email, (emailResponse) => {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'text/plain');
+                res.end(emailResponse);
+            });
         });
     } else {
         res.statusCode = 404;
